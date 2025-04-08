@@ -1,5 +1,5 @@
 """
-食物热量估算器启动脚本
+Food Calorie Estimator Startup Script
 """
 
 import os
@@ -8,11 +8,11 @@ import subprocess
 import importlib.util
 
 def check_module(module_name):
-    """检查模块是否已安装"""
+    """Check if a module is installed"""
     return importlib.util.find_spec(module_name) is not None
 
 def check_and_install_dependencies():
-    """检查并安装所需的依赖项"""
+    """Check and install required dependencies"""
     required_modules = [
         "streamlit", "pillow", "requests", "pandas", 
         "beautifulsoup4", "plotly", "uuid"
@@ -24,56 +24,56 @@ def check_and_install_dependencies():
             missing_modules.append(module)
     
     if missing_modules:
-        print(f"正在安装缺少的依赖项: {', '.join(missing_modules)}")
+        print(f"Installing missing dependencies: {', '.join(missing_modules)}")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install"] + missing_modules)
-            print("依赖项安装完成。")
+            print("Dependencies installation completed.")
         except subprocess.CalledProcessError as e:
-            print(f"安装依赖项时出错: {str(e)}")
+            print(f"Error installing dependencies: {str(e)}")
             return False
     
     return True
 
 def main():
-    """启动Streamlit应用"""
-    print("启动食物热量估算器应用...")
+    """Launch Streamlit application"""
+    print("Starting Food Calorie Estimator application...")
     
-    # 检查和安装依赖项
+    # Check and install dependencies
     if not check_and_install_dependencies():
-        print("无法安装所需的依赖项，应用程序可能无法正常运行。")
-        user_input = input("是否仍要尝试启动应用? (y/n): ")
+        print("Unable to install required dependencies, the application may not function properly.")
+        user_input = input("Do you still want to try launching the application? (y/n): ")
         if user_input.lower() != 'y':
             sys.exit(1)
     
-    # 获取当前脚本所在目录
+    # Get the directory of the current script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
-    # 设置应用路径
+    # Set the application path
     app_path = os.path.join(script_dir, "app", "app.py")
     
-    # 检查应用文件是否存在
+    # Check if the application file exists
     if not os.path.exists(app_path):
-        print(f"错误: 找不到应用文件 {app_path}")
+        print(f"Error: Application file not found at {app_path}")
         sys.exit(1)
     
-    # 确保temp_images目录存在
+    # Ensure temp_images directory exists
     temp_images_dir = os.path.join(script_dir, "temp_images")
     if not os.path.exists(temp_images_dir):
         os.makedirs(temp_images_dir)
-        print(f"已创建临时图像目录: {temp_images_dir}")
+        print(f"Created temporary images directory: {temp_images_dir}")
     
-    # 启动Streamlit应用
+    # Start Streamlit application
     try:
-        print(f"正在启动应用，请稍等...")
-        # 设置环境变量以显示完整日志
+        print(f"Launching the application, please wait...")
+        # Set environment variables to display full logs
         env = os.environ.copy()
         env["PYTHONPATH"] = script_dir
         
-        # 运行Streamlit应用
+        # Run the Streamlit application
         subprocess.run([sys.executable, "-m", "streamlit", "run", app_path], env=env, check=True)
     except Exception as e:
-        print(f"启动应用时出错: {str(e)}")
-        print("请确保已安装所有依赖项: pip install -r requirements.txt")
+        print(f"Error starting the application: {str(e)}")
+        print("Please make sure all dependencies are installed: pip install -r requirements.txt")
         sys.exit(1)
 
 if __name__ == "__main__":

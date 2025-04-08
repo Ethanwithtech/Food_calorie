@@ -43,14 +43,14 @@ class GenAIClient:
             print("Failed to encode image")
             return None
         
-        # 使用正确的HKBU GenAI Platform API格式
+        # Use the correct HKBU GenAI Platform API format
         base_url = "https://genai.hkbu.edu.hk/general/rest/deployments"
         api_version = "2024-05-01-preview"
         
-        # 可用模型列表
+        # Available models list
         models = ["gpt-4-o", "gpt-4-o-mini"]
         
-        # 优化提示词，特别说明多食物识别
+        # Optimize prompts, specifically for multiple food recognition
         prompt_zh = """这张图片中有哪些食物？如果有多种食物，请列出所有食物名称，用逗号分隔。
 请只回答具体的食物名称，不要使用"餐点"、"膳食"、"meal"这样的通用词汇。
 每种食物需要单独命名，例如"汉堡和薯条"应该回答"汉堡,薯条"而不是"快餐"。
@@ -89,24 +89,24 @@ Be especially careful to identify these common foods:
 - ice cream
 """
         
-        # 根据当前语言选择提示词
+        # Choose prompt based on current language
         prompt = prompt_zh if hasattr(st.session_state, 'language') and st.session_state.language == "zh" else prompt_en
         
-        # 收集识别结果
+        # Collect recognition results
         image_analysis_results = []
         
-        # 尝试不同的模型
+        # Try different models
         for model in models:
             endpoint = f"{base_url}/{model}/chat/completions?api-version={api_version}"
-            print(f"尝试调用模型: {model}，端点: {endpoint}")
+            print(f"Attempting to call model: {model}, endpoint: {endpoint}")
             
-            # 使用正确的请求头格式
+            # Use correct request header format
             headers = {
                 "Content-Type": "application/json",
                 "api-key": self.api_key
             }
             
-            # 请求负载
+            # Request payload
             payload = {
                 "messages": [
                     {
@@ -130,7 +130,7 @@ Be especially careful to identify these common foods:
             }
             
             try:
-                print(f"发送请求到 {model} 模型")
+                print(f"Sending request to {model} model")
                 
                 response = requests.post(
                     endpoint,
@@ -139,8 +139,8 @@ Be especially careful to identify these common foods:
                     timeout=30
                 )
                 
-                print(f"响应状态码: {response.status_code}")
-                print(f"响应内容: {response.text[:200]}")
+                print(f"Response status code: {response.status_code}")
+                print(f"Response content: {response.text[:200]}")
                 
                 if response.status_code == 200:
                     try:
@@ -148,63 +148,63 @@ Be especially careful to identify these common foods:
                         
                         if "choices" in result and len(result["choices"]) > 0:
                             content = result["choices"][0]["message"]["content"].strip()
-                            print(f"原始识别结果: '{content}'")
+                            print(f"Original recognition result: '{content}'")
                             
-                            # 处理多个食物的情况
+                            # Handle the case of multiple foods
                             food_items = []
                             
-                            # 分割内容，获取食物列表
+                            # Split content to get food list
                             for item in content.split(','):
                                 food_name = item.strip().lower()
                                 
-                                # 移除常见引导词
+                                # Remove common leading phrases
                                 for prefix in ["这是", "这张图片是", "图片中的食物是", "食物是", 
                                               "这是一个", "这是一份", "一个", "一份", "包含", "这是"]:
                                     if food_name.startswith(prefix):
                                         food_name = food_name[len(prefix):].strip()
                                 
-                                # 移除标点符号和数字标记
+                                # Remove punctuation and number markers
                                 for ch in ['。', '，', '、', '：', ':', '.', ',', '1.', '2.', '3.', '4.', '5.', '-']:
                                     food_name = food_name.replace(ch, '').strip()
                                 
-                                # 过滤掉通用词和空值
+                                # Filter out generic terms and empty values
                                 if food_name and food_name not in ["meal", "dish", "food", "餐点", "膳食", "食物"]:
-                                    print(f"处理后的食物名称: '{food_name}'")
+                                    print(f"Processed food name: '{food_name}'")
                                     food_items.append(food_name)
                                 
-                            # 将识别结果添加到总列表
+                            # Add recognition results to the total list
                             image_analysis_results.extend(food_items)
                             
-                            # 如果至少找到一种食物就返回
+                            # Return if at least one food is found
                             if food_items:
-                                # 映射食物名称到当前界面语言
+                                # Map food names to current interface language
                                 translated_foods = self.translate_food_names(food_items)
                                 
-                                # 如果只有一种食物，直接返回字符串
+                                # If only one food, return string
                                 if len(translated_foods) == 1:
                                     return translated_foods[0]
-                                # 如果有多种食物，返回列表
+                                # If multiple foods, return list
                                 else:
                                     return translated_foods
                     except Exception as e:
-                        print(f"处理响应时出错: {str(e)}")
+                        print(f"Error processing response: {str(e)}")
                 else:
-                    print(f"API请求失败，状态码: {response.status_code}")
-                    print(f"错误响应: {response.text}")
+                    print(f"API request failed, status code: {response.status_code}")
+                    print(f"Error response: {response.text}")
             except Exception as e:
-                print(f"请求异常: {str(e)}")
+                print(f"Request exception: {str(e)}")
         
-        # 如果API识别到了食物但尚未返回
+        # If API recognized food but hasn't returned yet
         if image_analysis_results:
-            # 过滤掉"meal"这样的通用词
+            # Filter out generic terms like "meal"
             specific_foods = [food for food in image_analysis_results if food.lower() != "meal"]
             
-            # 如果过滤后没有具体食物，但有通用"meal"词，则使用图像分析尝试确定具体食物
+            # If filtered out but has generic "meal" term, use image analysis to determine specific food
             if not specific_foods and "meal" in [food.lower() for food in image_analysis_results]:
-                # 使用图像分析
+                # Use image analysis
                 specific_foods = self.analyze_image_colors(image_path)
             
-            # 如果有具体食物名称
+            # If there are specific food names
             if specific_foods:
                 translated_foods = self.translate_food_names(specific_foods)
                 if len(translated_foods) == 1:
@@ -212,7 +212,7 @@ Be especially careful to identify these common foods:
                 else:
                     return translated_foods
         
-        # 尝试从图片名称中提取食物名称
+        # Try to extract food name from image filename
         try:
             filename = os.path.basename(image_path).lower()
             common_foods = ["hamburger", "burger", "pizza", "sandwich", "salad", 
@@ -225,16 +225,16 @@ Be especially careful to identify these common foods:
                     found_foods.append(food)
             
             if found_foods:
-                print(f"使用文件名识别食物: {found_foods}")
+                print(f"Using filename to recognize food: {found_foods}")
                 translated_foods = self.translate_food_names(found_foods)
                 if len(translated_foods) == 1:
                     return translated_foods[0]
                 else:
                     return translated_foods
         except Exception as filename_error:
-            print(f"从文件名识别时出错: {str(filename_error)}")
+            print(f"Error recognizing food from filename: {str(filename_error)}")
         
-        # 图像分析，查找常见食物特征
+        # Image analysis, find common food features
         found_foods = self.analyze_image_colors(image_path)
         if found_foods:
             translated_foods = self.translate_food_names(found_foods)
@@ -243,30 +243,30 @@ Be especially careful to identify these common foods:
             else:
                 return translated_foods
         
-        # 最后使用默认值
+        # Finally use default value
         if "hamburger" in image_path.lower() or "burger" in image_path.lower():
             return "汉堡" if hasattr(st.session_state, 'language') and st.session_state.language == "zh" else "hamburger"
         elif "pizza" in image_path.lower():
             return "披萨" if hasattr(st.session_state, 'language') and st.session_state.language == "zh" else "pizza"
         
-        # 完全找不到时返回汉堡作为默认值
+        # Completely not found, return hamburger as default
         return "汉堡" if hasattr(st.session_state, 'language') and st.session_state.language == "zh" else "hamburger"
 
     def analyze_image_colors(self, image_path):
-        """分析图像颜色识别可能的食物"""
+        """Analyze image color recognition for possible food"""
         try:
             from PIL import Image
             img = Image.open(image_path)
             
-            # 获取图像主要颜色
+            # Get image main colors
             img = img.resize((50, 50))
             colors = img.getcolors(2500)
             
             if colors:
-                # 按出现频率排序
+                # Sort by appearance frequency
                 colors.sort(reverse=True)
                 
-                # 检查各种食物特征色
+                # Check various food feature colors
                 has_brown = any(
                     100 < r < 200 and 50 < g < 150 and 0 < b < 100
                     for count, (r, g, b) in colors if count > 50
@@ -287,7 +287,7 @@ Be especially careful to identify these common foods:
                     for count, (r, g, b) in colors if count > 50
                 )
                 
-                # 基于颜色特征推断食物
+                # Based on color features infer food
                 found_foods = []
                 if has_brown:
                     found_foods.append("hamburger")
@@ -300,14 +300,14 @@ Be especially careful to identify these common foods:
                     
                 return found_foods
         except Exception as color_error:
-            print(f"颜色分析出错: {str(color_error)}")
+            print(f"Error with color analysis: {str(color_error)}")
         
         return []
 
     def translate_food_names(self, food_names):
-        """将食物名称翻译为当前界面语言"""
+        """Translate food names to current interface language"""
         food_mapping = {
-            # 英文食物名及其中文翻译
+            # English food names and their Chinese translations
             "pizza": "披萨",
             "hamburger": "汉堡",
             "burger": "汉堡",
@@ -339,7 +339,7 @@ Be especially careful to identify these common foods:
             "pasta": "意大利面",
             "noodles": "面条",
             
-            # 中文食物名及其英文翻译
+            # Chinese food names and their English translations
             "披萨": "pizza",
             "比萨": "pizza",
             "汉堡": "hamburger",
@@ -376,15 +376,15 @@ Be especially careful to identify these common foods:
         for food in food_names:
             food = food.lower().strip()
             
-            # 检查是否需要翻译
+            # Check if translation is needed
             if hasattr(st.session_state, 'language') and st.session_state.language == "zh":
-                # 当前是中文界面，如果是英文食物名，翻译为中文
+                # Current is Chinese interface, if it's English food name, translate to Chinese
                 if food in food_mapping and not any(c >= '\u4e00' and c <= '\u9fff' for c in food):
                     result.append(food_mapping[food])
                 else:
                     result.append(food)
             else:
-                # 当前是英文界面，如果是中文食物名，翻译为英文
+                # Current is English interface, if it's Chinese food name, translate to English
                 if food in food_mapping and any(c >= '\u4e00' and c <= '\u9fff' for c in food):
                     result.append(food_mapping[food])
                 else:

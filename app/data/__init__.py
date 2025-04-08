@@ -1,3 +1,3 @@
 """
-食物热量数据模块
+Food calorie data module
 """ 
