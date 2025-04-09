@@ -101,6 +101,8 @@ TRANSLATIONS = {
         "female": "Female",
         "fitness_recommendations": "Fitness Recommendations",
         "diet_recommendations": "Diet Recommendations",
+        "weekly_diet_plan": "Weekly Diet Plan",
+        "weekly_workout_plan": "Weekly Workout Plan",
         "calorie_goal": "Calorie Goal",
         "weight_loss": "Weight Loss",
         "weight_gain": "Weight Gain",
@@ -121,6 +123,27 @@ TRANSLATIONS = {
         "of_daily_needs": "of your daily needs",
         "workout_suggestion": "Workout Suggestion",
         "not_enough_data": "Please set up your profile for personalized recommendations",
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "dinner": "Dinner",
+        "snacks": "Snacks",
+        "day_plan": "Day Plan",
+        "generate_plan": "Generate Personalized Plan",
+        "plan_generated": "Your personalized plan has been generated!",
+        "daily_macros": "Daily Macronutrients",
+        "protein": "Protein",
+        "carbs": "Carbohydrates",
+        "fat": "Fat",
+        "total": "Total",
+        "workout_type": "Workout Type",
+        "intensity": "Intensity",
+        "duration": "Duration",
+        "low": "Low",
+        "moderate": "Moderate",
+        "high": "High",
+        "strength": "Strength",
+        "cardio": "Cardio",
+        "rest": "Rest/Recovery"
     },
     "zh": {
         "page_title": "食物热量估算器",
@@ -204,6 +227,8 @@ TRANSLATIONS = {
         "female": "女性",
         "fitness_recommendations": "健身建议",
         "diet_recommendations": "饮食建议",
+        "weekly_diet_plan": "一周饮食计划",
+        "weekly_workout_plan": "一周锻炼计划",
         "calorie_goal": "卡路里目标",
         "weight_loss": "减重",
         "weight_gain": "增重",
@@ -218,12 +243,33 @@ TRANSLATIONS = {
         "carbs_recommendation": "碳水化合物建议",
         "fat_recommendation": "脂肪建议",
         "daily_target": "每日目标",
-        "meal_timing": "用餐时间",
+        "meal_timing": "餐食时间",
         "current_meal_calories": "这餐提供",
-        "remaining_calories": "今日剩余",
-        "of_daily_needs": "占您每日需求的",
+        "remaining_calories": "今天剩余",
+        "of_daily_needs": "满足每日需求的",
         "workout_suggestion": "锻炼建议",
-        "not_enough_data": "请设置您的个人资料以获取个性化建议",
+        "not_enough_data": "请设置您的个人资料以获得个性化建议",
+        "breakfast": "早餐",
+        "lunch": "午餐",
+        "dinner": "晚餐",
+        "snacks": "零食",
+        "day_plan": "每日计划",
+        "generate_plan": "生成个性化计划",
+        "plan_generated": "您的个性化计划已生成！",
+        "daily_macros": "每日宏量营养素",
+        "protein": "蛋白质",
+        "carbs": "碳水化合物",
+        "fat": "脂肪",
+        "total": "总计",
+        "workout_type": "锻炼类型",
+        "intensity": "强度",
+        "duration": "时长",
+        "low": "低",
+        "moderate": "中",
+        "high": "高",
+        "strength": "力量",
+        "cardio": "有氧",
+        "rest": "休息/恢复"
     }
 }
 
@@ -1145,7 +1191,12 @@ def display_multiple_results(food_names, calories_info_list, data_sources):
         """, unsafe_allow_html=True)
         
         # 创建选项卡为健身和饮食建议
-        fitness_tab, diet_tab = st.tabs([get_text('fitness_recommendations'), get_text('diet_recommendations')])
+        fitness_tab, diet_tab, weekly_diet_tab, weekly_workout_tab = st.tabs([
+            get_text('fitness_recommendations'), 
+            get_text('diet_recommendations'),
+            get_text('weekly_diet_plan'),
+            get_text('weekly_workout_plan')
+        ])
         
         with fitness_tab:
             # 获取健身建议
@@ -1178,132 +1229,285 @@ def display_multiple_results(food_names, calories_info_list, data_sources):
                 """, unsafe_allow_html=True)
         
         with diet_tab:
-            # 获取营养建议
+            # 确定用户目标 (根据BMI简单判断)
+            if bmi < 18.5:
+                goal = "gain"  # 体重不足，需要增重
+            elif bmi > 25:
+                goal = "lose"  # 超重，需要减重
+            else:
+                goal = "maintain"  # 正常体重，保持即可
+                
+            # 获取营养计划
             nutrition_plan = get_nutrition_plan(
                 user_profile["gender"],
-                user_profile["weight"],
+                user_profile["weight"], 
                 user_profile["activity"],
                 goal
             )
             
-            # 显示目标和卡路里信息
-            goal_text = ""
-            if goal == "lose":
-                calorie_deficit = 500  # 标准减脂赤字
-                target_calories = daily_calories - calorie_deficit
-                goal_text = get_text("weight_loss")
-                deficit_text = f"{get_text('daily_deficit')}: {calorie_deficit} {get_text('calories_unit')}"
-            elif goal == "gain":
-                calorie_surplus = 500  # 标准增肌盈余
-                target_calories = daily_calories + calorie_surplus
-                goal_text = get_text("weight_gain")
-                deficit_text = f"{get_text('daily_surplus')}: {calorie_surplus} {get_text('calories_unit')}"
-            else:
-                target_calories = daily_calories
-                goal_text = get_text("weight_maintain")
-                deficit_text = ""
+            # 显示每日宏量营养素目标
+            st.markdown(f"### 🥗 {get_text('daily_macros')}")
             
-            # 显示目标和卡路里信息
-            st.markdown(f"### 🎯 {get_text('calorie_goal')}: {goal_text}")
+            # 创建宏量营养素表格
+            macro_data = {
+                get_text("protein"): f"{nutrition_plan['protein']['amount']}g",
+                get_text("carbs"): f"{nutrition_plan['carbs']['amount']}g",
+                get_text("fat"): f"{nutrition_plan['fat']['amount']}g"
+            }
             
-            # 创建三列显示卡路里信息
-            cal_col1, cal_col2, cal_col3 = st.columns(3)
+            # 计算总卡路里
+            total_calories = (nutrition_plan['protein']['amount'] * 4) + (nutrition_plan['carbs']['amount'] * 4) + (nutrition_plan['fat']['amount'] * 9)
+            macro_data[get_text("total")] = f"{total_calories} {get_text('calories_unit')}"
             
-            with cal_col1:
-                st.markdown(f"""
-                <div style="text-align: center; padding: 15px; background-color: #FFEBEE; border-radius: 8px; margin: 0 5px; border: 1px solid #E57373;">
-                    <div style="font-weight: bold; color: #C62828; font-size: 1.1rem;">{get_text('current_meal_calories')}</div>
-                    <div style="font-size: 1.8rem; margin: 5px 0; color: #000000; font-weight: bold;">{total_calories} {get_text('calories_unit')}</div>
-                    <div style="font-size: 0.9rem; color: #666666;">{round((total_calories/daily_calories)*100, 1)}% {get_text('of_daily_needs')}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # 显示数据表格
+            st.table(macro_data)
             
-            with cal_col2:
-                st.markdown(f"""
-                <div style="text-align: center; padding: 15px; background-color: #E8F5E9; border-radius: 8px; margin: 0 5px; border: 1px solid #66BB6A;">
-                    <div style="font-weight: bold; color: #2E7D32; font-size: 1.1rem;">{get_text('daily_target')}</div>
-                    <div style="font-size: 1.8rem; margin: 5px 0; color: #000000; font-weight: bold;">{target_calories} {get_text('calories_unit')}</div>
-                    <div style="font-size: 0.9rem; color: #666666;">{deficit_text}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            # 显示宏量营养素饼图
+            protein_cals = nutrition_plan['protein']['amount'] * 4
+            carb_cals = nutrition_plan['carbs']['amount'] * 4
+            fat_cals = nutrition_plan['fat']['amount'] * 9
             
-            with cal_col3:
-                remaining = target_calories - total_calories
-                color_class = "E8F5E9" if remaining > 0 else "FFEBEE"
-                border_class = "66BB6A" if remaining > 0 else "E57373"
-                text_class = "2E7D32" if remaining > 0 else "C62828"
-                
-                st.markdown(f"""
-                <div style="text-align: center; padding: 15px; background-color: #{color_class}; border-radius: 8px; margin: 0 5px; border: 1px solid #{border_class};">
-                    <div style="font-weight: bold; color: #{text_class}; font-size: 1.1rem;">{get_text('remaining_calories')}</div>
-                    <div style="font-size: 1.8rem; margin: 5px 0; color: #000000; font-weight: bold;">{remaining} {get_text('calories_unit')}</div>
-                </div>
-                """, unsafe_allow_html=True)
+            fig = go.Figure(data=[go.Pie(
+                labels=[get_text("protein"), get_text("carbs"), get_text("fat")],
+                values=[protein_cals, carb_cals, fat_cals],
+                marker=dict(colors=['#3F51B5', '#4CAF50', '#FF9800']),
+                hole=.4
+            )])
+            
+            fig.update_layout(
+                title=get_text("daily_macros"),
+                legend=dict(orientation="h")
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
             
             # 显示宏量营养素建议
-            st.markdown(f"### 📊 {get_text('diet_recommendations')}")
+            st.markdown(f"### 🍽️ {get_text('diet_recommendations')}")
             
             # 蛋白质建议
-            st.markdown(f"#### {get_text('protein_recommendation')}")
-            protein_advice = nutrition_plan["protein"]["advice"]["en"] if st.session_state.language == "en" else nutrition_plan["protein"]["advice"]["zh"]
             st.markdown(f"""
-            <div style="padding: 15px; background-color: #E8F5E9; border-radius: 8px; margin: 8px 0;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-weight: bold; color: #2E7D32; font-size: 1.2rem;">{nutrition_plan["protein"]["amount"]} g</span>
-                    <span style="color: #555555;">{protein_advice}</span>
-                </div>
+            <div style="padding: 10px; background-color: #E8EAF6; border-radius: 8px; margin: 8px 0; border-left: 4px solid #3F51B5;">
+                <h4 style="margin-top: 0; font-size: 1rem; color: #283593;">{get_text('protein_recommendation')}</h4>
+                <p style="margin: 0; color: #283593;">{nutrition_plan['protein']['advice']['en'] if st.session_state.language == 'en' else nutrition_plan['protein']['advice']['zh']}</p>
             </div>
             """, unsafe_allow_html=True)
             
-            # 碳水化合物建议
-            st.markdown(f"#### {get_text('carbs_recommendation')}")
-            carbs_advice = nutrition_plan["carbs"]["advice"]["en"] if st.session_state.language == "en" else nutrition_plan["carbs"]["advice"]["zh"]
+            # 碳水建议
             st.markdown(f"""
-            <div style="padding: 15px; background-color: #E3F2FD; border-radius: 8px; margin: 8px 0;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-weight: bold; color: #1565C0; font-size: 1.2rem;">{nutrition_plan["carbs"]["amount"]} g</span>
-                    <span style="color: #555555;">{carbs_advice}</span>
-                </div>
+            <div style="padding: 10px; background-color: #E8F5E9; border-radius: 8px; margin: 8px 0; border-left: 4px solid #4CAF50;">
+                <h4 style="margin-top: 0; font-size: 1rem; color: #2E7D32;">{get_text('carbs_recommendation')}</h4>
+                <p style="margin: 0; color: #2E7D32;">{nutrition_plan['carbs']['advice']['en'] if st.session_state.language == 'en' else nutrition_plan['carbs']['advice']['zh']}</p>
             </div>
             """, unsafe_allow_html=True)
             
             # 脂肪建议
-            st.markdown(f"#### {get_text('fat_recommendation')}")
-            fat_advice = nutrition_plan["fat"]["advice"]["en"] if st.session_state.language == "en" else nutrition_plan["fat"]["advice"]["zh"]
             st.markdown(f"""
-            <div style="padding: 15px; background-color: #FFF3E0; border-radius: 8px; margin: 8px 0;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-weight: bold; color: #EF6C00; font-size: 1.2rem;">{nutrition_plan["fat"]["amount"]} g</span>
-                    <span style="color: #555555;">{fat_advice}</span>
-                </div>
+            <div style="padding: 10px; background-color: #FFF3E0; border-radius: 8px; margin: 8px 0; border-left: 4px solid #FF9800;">
+                <h4 style="margin-top: 0; font-size: 1rem; color: #E65100;">{get_text('fat_recommendation')}</h4>
+                <p style="margin: 0; color: #E65100;">{nutrition_plan['fat']['advice']['en'] if st.session_state.language == 'en' else nutrition_plan['fat']['advice']['zh']}</p>
             </div>
             """, unsafe_allow_html=True)
             
-            # 用餐时间建议
-            st.markdown(f"#### {get_text('meal_timing')}")
-            meal_timings = nutrition_plan["meal_timing"]["en"] if st.session_state.language == "en" else nutrition_plan["meal_timing"]["zh"]
-            for timing in meal_timings:
+            # 餐食时间建议
+            st.markdown(f"### ⏰ {get_text('meal_timing')}")
+            
+            meal_timing = nutrition_plan['meal_timing']['en'] if st.session_state.language == 'en' else nutrition_plan['meal_timing']['zh']
+            for timing in meal_timing:
                 st.markdown(f"""
                 <div style="padding: 10px; background-color: #F3E5F5; border-radius: 8px; margin: 8px 0; border-left: 4px solid #9C27B0;">
                     <p style="margin: 0; color: #6A1B9A;">{timing}</p>
                 </div>
                 """, unsafe_allow_html=True)
+        
+        with weekly_diet_tab:
+            # 生成一周饮食计划按钮
+            if 'weekly_diet_plan' not in st.session_state:
+                st.session_state.weekly_diet_plan = None
             
-            # 显示特定于当前餐食的建议
-            meal_specific_recs = get_meal_specific_recommendations(total_calories, food_names, daily_calories, user_profile)
-            suggestions = meal_specific_recs["en"] if st.session_state.language == "en" else meal_specific_recs["zh"]
+            if st.button(get_text('generate_plan'), key="generate_diet_plan"):
+                # 确定用户目标
+                if bmi < 18.5:
+                    goal = "gain"  # 体重不足，需要增重
+                elif bmi > 25:
+                    goal = "lose"  # 超重，需要减重
+                else:
+                    goal = "maintain"  # 正常体重，保持即可
+                
+                # 计算每日卡路里需求
+                daily_calories = calculate_daily_calories(
+                    user_profile["height"],
+                    user_profile["weight"],
+                    user_profile["age"],
+                    user_profile["gender"],
+                    user_profile["activity"]
+                )
+                
+                # 生成饮食计划
+                st.session_state.weekly_diet_plan = generate_weekly_diet_plan(
+                    user_profile["gender"],
+                    user_profile["weight"],
+                    user_profile["activity"],
+                    goal,
+                    daily_calories
+                )
+                
+                st.success(get_text('plan_generated'))
+                st.rerun()
             
-            if suggestions:
-                st.markdown(f"### 🍽️ {get_text('diet_advice')}")
-                for suggestion in suggestions:
+            # 显示一周饮食计划
+            if st.session_state.weekly_diet_plan:
+                plan = st.session_state.weekly_diet_plan
+                
+                # 显示每日宏量营养素
+                st.markdown(f"### 🥗 {get_text('daily_macros')}")
+                
+                macro_data = {
+                    get_text("protein"): f"{plan['protein_g']}g",
+                    get_text("carbs"): f"{plan['carbs_g']}g",
+                    get_text("fat"): f"{plan['fat_g']}g",
+                    get_text("total"): f"{plan['daily_calories']} {get_text('calories_unit')}"
+                }
+                
+                st.table(macro_data)
+                
+                # 显示每天的计划
+                for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
+                    day_plan = plan["days"][day]
+                    day_name = day_plan["name"]["en"] if st.session_state.language == "en" else day_plan["name"]["zh"]
+                    
+                    with st.expander(f"📆 {day_name}"):
+                        meals = day_plan["plan"]["meals"]
+                        calories = day_plan["plan"]["calories"]
+                        
+                        st.markdown(f"""
+                        <div style="background-color: #E8F5E9; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #2E7D32;">🍳 {get_text('breakfast')} - {calories['breakfast']} {get_text('calories_unit')}</h4>
+                            <p style="margin: 0; font-size: 1.1rem; color: #1B5E20;">{meals['breakfast']['en'] if st.session_state.language == 'en' else meals['breakfast']['zh']}</p>
+                        </div>
+                        
+                        <div style="background-color: #E3F2FD; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #1565C0;">🍲 {get_text('lunch')} - {calories['lunch']} {get_text('calories_unit')}</h4>
+                            <p style="margin: 0; font-size: 1.1rem; color: #0D47A1;">{meals['lunch']['en'] if st.session_state.language == 'en' else meals['lunch']['zh']}</p>
+                        </div>
+                        
+                        <div style="background-color: #FFF3E0; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #E65100;">🍽️ {get_text('dinner')} - {calories['dinner']} {get_text('calories_unit')}</h4>
+                            <p style="margin: 0; font-size: 1.1rem; color: #BF360C;">{meals['dinner']['en'] if st.session_state.language == 'en' else meals['dinner']['zh']}</p>
+                        </div>
+                        
+                        <div style="background-color: #F3E5F5; padding: 15px; border-radius: 10px; margin-bottom: 15px;">
+                            <h4 style="margin-top: 0; color: #6A1B9A;">🍌 {get_text('snacks')} - {calories['snacks']} {get_text('calories_unit')}</h4>
+                            <p style="margin: 0; font-size: 1.1rem; color: #4A148C;">{meals['snacks']['en'] if st.session_state.language == 'en' else meals['snacks']['zh']}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+        with weekly_workout_tab:
+            # 生成一周锻炼计划按钮
+            if 'weekly_workout_plan' not in st.session_state:
+                st.session_state.weekly_workout_plan = None
+            
+            if st.button(get_text('generate_plan'), key="generate_workout_plan"):
+                # 确定用户目标
+                if bmi < 18.5:
+                    goal = "gain"  # 体重不足，需要增重
+                elif bmi > 25:
+                    goal = "lose"  # 超重，需要减重
+                else:
+                    goal = "maintain"  # 正常体重，保持即可
+                
+                # 生成锻炼计划
+                st.session_state.weekly_workout_plan = generate_weekly_workout_plan(
+                    user_profile["gender"],
+                    user_profile["age"],
+                    user_profile["bmi"],
+                    user_profile["activity"],
+                    goal
+                )
+                
+                st.success(get_text('plan_generated'))
+                st.rerun()
+            
+            # 显示一周锻炼计划
+            if st.session_state.weekly_workout_plan:
+                plan = st.session_state.weekly_workout_plan
+                
+                # 显示计划概览
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric(get_text('strength_training'), f"{plan['strength_days']} days")
+                
+                with col2:
+                    st.metric(get_text('cardio_training'), f"{plan['cardio_days']} days")
+                
+                with col3:
+                    st.metric(get_text('rest'), f"{plan['rest_days']} days")
+                
+                intensity_text = get_text('low') if plan['intensity'] == 'low' else (get_text('moderate') if plan['intensity'] == 'moderate' else get_text('high'))
+                st.info(f"{get_text('intensity')}: {intensity_text}")
+                
+                # 显示每天的锻炼计划
+                for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]:
+                    day_plan = plan["days"][day]
+                    day_name = day_plan["name"]["en"] if st.session_state.language == "en" else day_plan["name"]["zh"]
+                    workout = day_plan["workout"]
+                    
+                    # 设置不同类型的颜色
+                    if workout["type"] == "strength":
+                        bg_color = "#E8EAF6"
+                        border_color = "#3F51B5"
+                        text_color = "#283593"
+                        icon = "🏋️"
+                        type_text = get_text('strength')
+                    elif workout["type"] == "cardio":
+                        bg_color = "#E3F2FD"
+                        border_color = "#2196F3"
+                        text_color = "#1565C0"
+                        icon = "🏃"
+                        type_text = get_text('cardio')
+                    else:  # rest
+                        bg_color = "#ECEFF1"
+                        border_color = "#607D8B"
+                        text_color = "#37474F"
+                        icon = "🧘"
+                        type_text = get_text('rest')
+                    
+                    # 显示锻炼内容
                     st.markdown(f"""
-                    <div style="padding: 10px; background-color: #F9FBE7; border-radius: 8px; margin: 8px 0; border-left: 4px solid #AFB42B;">
-                        <p style="margin: 0; color: #827717;">{suggestion}</p>
+                    <div style="background-color: {bg_color}; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 5px solid {border_color};">
+                        <h4 style="margin-top: 0; color: {text_color};">📆 {day_name} - {icon} {type_text}</h4>
+                        <p style="margin: 0; font-size: 1.1rem; color: {text_color};">{workout['details']['en'] if st.session_state.language == 'en' else workout['details']['zh']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # 显示一般性建议
+                st.markdown(f"### 🔍 {get_text('fitness_recommendations')}")
+                
+                # 获取正确语言的建议
+                lang = "en" if st.session_state.language == "en" else "zh"
+                strength_advice = plan["general_advice"]["strength"][lang]
+                cardio_advice = plan["general_advice"]["cardio"][lang]
+                
+                # 显示力量训练建议
+                st.markdown(f"#### 🏋️ {get_text('strength_training')}")
+                for advice in strength_advice:
+                    st.markdown(f"""
+                    <div style="padding: 10px; background-color: #E8EAF6; border-radius: 8px; margin: 8px 0; border-left: 4px solid #3F51B5;">
+                        <p style="margin: 0; color: #283593;">{advice}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # 显示有氧训练建议
+                st.markdown(f"#### 🏃 {get_text('cardio_training')}")
+                for advice in cardio_advice:
+                    st.markdown(f"""
+                    <div style="padding: 10px; background-color: #E3F2FD; border-radius: 8px; margin: 8px 0; border-left: 4px solid #2196F3;">
+                        <p style="margin: 0; color: #1565C0;">{advice}</p>
                     </div>
                     """, unsafe_allow_html=True)
     else:
-        # 如果用户还未设置个人资料，显示提示消息
-        st.info(get_text("not_enough_data"))
+        # 如果用户没有设置个人资料，则显示提示
+        st.warning(get_text("not_enough_data"))
 
 def get_meal_specific_recommendations(meal_calories, food_names, daily_calories, user_profile):
     """获取针对特定餐食的建议"""
@@ -1629,6 +1833,376 @@ def get_nutrition_plan(gender, weight, activity, goal):
         plan["meal_timing"]["zh"].append("包括训练前后营养，最大化肌肉生长")
     
     return plan
+
+def generate_weekly_diet_plan(gender, weight, activity, goal, daily_calories):
+    """
+    Generate a weekly diet plan based on user profile
+    
+    Parameters:
+        gender: User's gender (male/female)
+        weight: User's weight in kg
+        activity: Activity level (sedentary/light/moderate/active/very)
+        goal: Weight goal (lose/gain/maintain)
+        daily_calories: Daily calorie target
+        
+    Returns:
+        Dictionary with daily meal plans for a week
+    """
+    # 获取营养比例
+    nutrition_plan = get_nutrition_plan(gender, weight, activity, goal)
+    protein_g = nutrition_plan["protein"]["amount"]
+    carbs_g = nutrition_plan["carbs"]["amount"]
+    fat_g = nutrition_plan["fat"]["amount"]
+    
+    # 为不同目标设置不同类型的食物
+    food_categories = {
+        "protein_foods": {
+            "en": ["Chicken breast", "Turkey", "Lean beef", "Salmon", "Tuna", "Eggs", "Greek yogurt", 
+                   "Cottage cheese", "Tofu", "Lentils", "Chickpeas", "Protein shake"],
+            "zh": ["鸡胸肉", "火鸡肉", "瘦牛肉", "三文鱼", "金枪鱼", "鸡蛋", "希腊酸奶", 
+                   "农家奶酪", "豆腐", "小扁豆", "鹰嘴豆", "蛋白质奶昔"]
+        },
+        "carb_foods": {
+            "en": ["Brown rice", "Quinoa", "Sweet potato", "Oatmeal", "Whole grain bread", 
+                   "Whole wheat pasta", "Barley", "Black beans", "Fruits", "Vegetables"],
+            "zh": ["糙米", "藜麦", "红薯", "燕麦片", "全麦面包", 
+                   "全麦意面", "大麦", "黑豆", "水果", "蔬菜"]
+        },
+        "fat_foods": {
+            "en": ["Avocado", "Olive oil", "Nuts", "Seeds", "Nut butters", "Fatty fish", "Eggs", "Cheese"],
+            "zh": ["牛油果", "橄榄油", "坚果", "种子", "坚果酱", "脂肪鱼", "鸡蛋", "奶酪"]
+        },
+        "vegetables": {
+            "en": ["Broccoli", "Spinach", "Kale", "Bell peppers", "Carrots", "Cauliflower", 
+                   "Asparagus", "Brussels sprouts", "Zucchini", "Mushrooms"],
+            "zh": ["西兰花", "菠菜", "羽衣甘蓝", "彩椒", "胡萝卜", "花椰菜", 
+                   "芦笋", "孢子甘蓝", "西葫芦", "蘑菇"]
+        },
+        "fruits": {
+            "en": ["Berries", "Apple", "Banana", "Orange", "Kiwi", "Pineapple", "Mango", "Grapefruit"],
+            "zh": ["浆果", "苹果", "香蕉", "橙子", "猕猴桃", "菠萝", "芒果", "葡萄柚"]
+        }
+    }
+    
+    # 调整食物选择基于目标
+    if goal == "lose":
+        # 减重计划偏好低卡高蛋白和高纤维
+        preferred_carbs = {
+            "en": ["Vegetables", "Berries", "Green apple", "Oatmeal", "Sweet potato"],
+            "zh": ["蔬菜", "浆果", "青苹果", "燕麦片", "红薯"]
+        }
+        preferred_fats = {
+            "en": ["Avocado", "Olive oil", "Chia seeds", "Flaxseeds", "Almonds"],
+            "zh": ["牛油果", "橄榄油", "奇亚籽", "亚麻籽", "杏仁"]
+        }
+    elif goal == "gain":
+        # 增重计划偏好高卡路里、高营养密度
+        preferred_carbs = {
+            "en": ["Brown rice", "Quinoa", "Oatmeal", "Whole grain bread", "Pasta", "Potatoes", "Banana"],
+            "zh": ["糙米", "藜麦", "燕麦片", "全麦面包", "意面", "土豆", "香蕉"]
+        }
+        preferred_fats = {
+            "en": ["Nut butters", "Olive oil", "Avocado", "Whole eggs", "Full-fat dairy", "Mixed nuts"],
+            "zh": ["坚果酱", "橄榄油", "牛油果", "全蛋", "全脂乳制品", "混合坚果"]
+        }
+    else:  # maintain
+        # 维持体重计划注重均衡
+        preferred_carbs = {
+            "en": ["Brown rice", "Quinoa", "Sweet potato", "Fruits", "Oatmeal", "Whole grains"],
+            "zh": ["糙米", "藜麦", "红薯", "水果", "燕麦片", "全谷物"]
+        }
+        preferred_fats = {
+            "en": ["Avocado", "Olive oil", "Mixed nuts", "Seeds", "Fatty fish"],
+            "zh": ["牛油果", "橄榄油", "混合坚果", "种子", "脂肪鱼"]
+        }
+    
+    # 根据性别和活动水平调整食物量
+    portion_modifier = 1.0
+    if gender == "male" and activity in ["active", "very"]:
+        portion_modifier = 1.3
+    elif gender == "female" and activity in ["sedentary", "light"]:
+        portion_modifier = 0.8
+    
+    # 每日卡路里分配到各餐
+    meal_calories = {
+        "breakfast": int(daily_calories * 0.25),  # 25% for breakfast
+        "lunch": int(daily_calories * 0.35),      # 35% for lunch
+        "dinner": int(daily_calories * 0.30),     # 30% for dinner
+        "snacks": int(daily_calories * 0.10)      # 10% for snacks
+    }
+    
+    # 生成一周的饮食计划
+    import random
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_names = {
+        "monday": {"en": "Monday", "zh": "星期一"},
+        "tuesday": {"en": "Tuesday", "zh": "星期二"},
+        "wednesday": {"en": "Wednesday", "zh": "星期三"},
+        "thursday": {"en": "Thursday", "zh": "星期四"},
+        "friday": {"en": "Friday", "zh": "星期五"},
+        "saturday": {"en": "Saturday", "zh": "星期六"},
+        "sunday": {"en": "Sunday", "zh": "星期日"}
+    }
+    
+    # 初始化饮食计划
+    weekly_plan = {
+        "daily_calories": daily_calories,
+        "protein_g": protein_g,
+        "carbs_g": carbs_g,
+        "fat_g": fat_g,
+        "days": {}
+    }
+    
+    # 为每天生成饮食计划
+    for day in days:
+        lang = "en"  # 默认英文
+        
+        breakfast_protein = random.choice(food_categories["protein_foods"][lang])
+        breakfast_carb = random.choice(preferred_carbs[lang])
+        breakfast_fat = random.choice(preferred_fats[lang])
+        
+        lunch_protein = random.choice([p for p in food_categories["protein_foods"][lang] if p != breakfast_protein])
+        lunch_carb = random.choice([c for c in preferred_carbs[lang] if c != breakfast_carb])
+        lunch_veg = random.choice(food_categories["vegetables"][lang])
+        
+        dinner_protein = random.choice([p for p in food_categories["protein_foods"][lang] if p != lunch_protein])
+        dinner_carb = random.choice([c for c in preferred_carbs[lang] if c != lunch_carb])
+        dinner_veg = random.choice([v for v in food_categories["vegetables"][lang] if v != lunch_veg])
+        dinner_fat = random.choice([f for f in preferred_fats[lang] if f != breakfast_fat])
+        
+        snack1 = random.choice(food_categories["fruits"][lang])
+        snack2 = random.choice([p for p in food_categories["protein_foods"][lang] if p != dinner_protein and p != lunch_protein and p != breakfast_protein])
+        
+        # 构建每日计划
+        daily_plan = {
+            "meals": {
+                "breakfast": {
+                    "en": f"{breakfast_protein} with {breakfast_carb} and {breakfast_fat}",
+                    "zh": f"{food_categories['protein_foods']['zh'][food_categories['protein_foods']['en'].index(breakfast_protein)]}配{preferred_carbs['zh'][preferred_carbs['en'].index(breakfast_carb)]}和{preferred_fats['zh'][preferred_fats['en'].index(breakfast_fat)]}"
+                },
+                "lunch": {
+                    "en": f"{lunch_protein} with {lunch_carb} and {lunch_veg}",
+                    "zh": f"{food_categories['protein_foods']['zh'][food_categories['protein_foods']['en'].index(lunch_protein)]}配{preferred_carbs['zh'][preferred_carbs['en'].index(lunch_carb)]}和{food_categories['vegetables']['zh'][food_categories['vegetables']['en'].index(lunch_veg)]}"
+                },
+                "dinner": {
+                    "en": f"{dinner_protein} with {dinner_carb}, {dinner_veg} and {dinner_fat}",
+                    "zh": f"{food_categories['protein_foods']['zh'][food_categories['protein_foods']['en'].index(dinner_protein)]}配{preferred_carbs['zh'][preferred_carbs['en'].index(dinner_carb)]}、{food_categories['vegetables']['zh'][food_categories['vegetables']['en'].index(dinner_veg)]}和{preferred_fats['zh'][preferred_fats['en'].index(dinner_fat)]}"
+                },
+                "snacks": {
+                    "en": f"{snack1} and {snack2}",
+                    "zh": f"{food_categories['fruits']['zh'][food_categories['fruits']['en'].index(snack1)]}和{food_categories['protein_foods']['zh'][food_categories['protein_foods']['en'].index(snack2)]}"
+                }
+            },
+            "calories": meal_calories
+        }
+        
+        weekly_plan["days"][day] = {
+            "name": day_names[day],
+            "plan": daily_plan
+        }
+    
+    return weekly_plan
+
+def generate_weekly_workout_plan(gender, age, bmi, activity_level, goal):
+    """
+    Generate a weekly workout plan based on user profile
+    
+    Parameters:
+        gender: User's gender (male/female)
+        age: User's age
+        bmi: User's BMI
+        activity_level: Activity level (sedentary/light/moderate/active/very)
+        goal: Weight goal (lose/gain/maintain)
+        
+    Returns:
+        Dictionary with daily workout plans for a week
+    """
+    # 先获取基础健身建议
+    fitness_recs = get_fitness_recommendations(gender, age, bmi, activity_level)
+    
+    # 确定每周训练天数
+    if activity_level in ["sedentary", "light"]:
+        training_days = 3  # 初学者从每周3天开始
+    elif activity_level == "moderate":
+        training_days = 4  # 中级训练者每周4天
+    else:  # 活跃或非常活跃
+        training_days = 5  # 高级训练者每周5-6天
+    
+    # 根据目标调整训练类型分配
+    if goal == "lose":
+        # 减重注重有氧训练，但仍保持力量训练以保留肌肉
+        cardio_days = training_days // 2 + (1 if training_days % 2 else 0)
+        strength_days = training_days - cardio_days
+    elif goal == "gain":
+        # 增肌注重力量训练
+        strength_days = training_days - 1  # 至少1天有氧
+        cardio_days = 1
+    else:  # maintain
+        # 维持平衡训练
+        strength_days = training_days // 2
+        cardio_days = training_days - strength_days
+    
+    # 确保至少有1天力量和1天有氧
+    strength_days = max(1, strength_days)
+    cardio_days = max(1, cardio_days)
+    
+    # 调整确保总天数正确
+    if strength_days + cardio_days > training_days:
+        # 优先保持力量训练天数，减少有氧天数
+        cardio_days = training_days - strength_days
+    
+    # 根据年龄和BMI调整训练强度
+    intensity = "moderate"  # 默认强度
+    
+    if age > 60 or bmi > 30 or bmi < 18.5:
+        intensity = "low"  # 高龄或BMI异常者使用低强度
+    elif (age < 40 and bmi >= 18.5 and bmi <= 25) and activity_level in ["active", "very"]:
+        intensity = "high"  # 年轻健康且已经活跃的人可以高强度
+    
+    # 训练类型
+    cardio_types = {
+        "low": {
+            "en": ["Walking (30 min)", "Light cycling (20 min)", "Swimming (20 min)", "Elliptical (15 min)"],
+            "zh": ["步行 (30分钟)", "轻度骑行 (20分钟)", "游泳 (20分钟)", "椭圆机 (15分钟)"]
+        },
+        "moderate": {
+            "en": ["Jogging (25 min)", "Cycling (30 min)", "Swimming (30 min)", "HIIT (15 min)", "Rowing (20 min)"],
+            "zh": ["慢跑 (25分钟)", "骑行 (30分钟)", "游泳 (30分钟)", "高强度间歇训练 (15分钟)", "划船 (20分钟)"]
+        },
+        "high": {
+            "en": ["Running (30 min)", "HIIT (20 min)", "Cycling intervals (30 min)", "Swimming sprints (25 min)", "Boxing (30 min)"],
+            "zh": ["跑步 (30分钟)", "高强度间歇训练 (20分钟)", "间歇骑行 (30分钟)", "游泳冲刺 (25分钟)", "拳击 (30分钟)"]
+        }
+    }
+    
+    strength_types = {
+        "low": {
+            "en": [
+                "Full body - Light weights (20 min)", 
+                "Body weight exercises (20 min)",
+                "Light dumbbell workout (15 min)",
+                "Resistance band workout (20 min)"
+            ],
+            "zh": [
+                "全身 - 轻重量 (20分钟)", 
+                "体重练习 (20分钟)",
+                "轻哑铃锻炼 (15分钟)",
+                "阻力带锻炼 (20分钟)"
+            ]
+        },
+        "moderate": {
+            "en": [
+                "Upper body strength (30 min)", 
+                "Lower body strength (30 min)",
+                "Core workout (20 min)",
+                "Full body strength (35 min)",
+                "Push exercises (30 min)",
+                "Pull exercises (30 min)"
+            ],
+            "zh": [
+                "上肢力量 (30分钟)", 
+                "下肢力量 (30分钟)",
+                "核心锻炼 (20分钟)",
+                "全身力量 (35分钟)",
+                "推力训练 (30分钟)",
+                "拉力训练 (30分钟)"
+            ]
+        },
+        "high": {
+            "en": [
+                "Heavy upper body (40 min)", 
+                "Heavy lower body (40 min)",
+                "High-intensity circuit training (35 min)",
+                "Power training (35 min)",
+                "Olympic lifts (40 min)",
+                "Full body with supersets (45 min)"
+            ],
+            "zh": [
+                "重量上肢训练 (40分钟)", 
+                "重量下肢训练 (40分钟)",
+                "高强度循环训练 (35分钟)",
+                "力量训练 (35分钟)",
+                "奥林匹克举重 (40分钟)",
+                "全身超级组训练 (45分钟)"
+            ]
+        }
+    }
+    
+    # 休息放松训练
+    recovery_types = {
+        "en": ["Rest day", "Active recovery - Walking (20 min)", "Stretching (15 min)", "Yoga (20 min)", "Light mobility work (15 min)"],
+        "zh": ["休息日", "主动恢复 - 步行 (20分钟)", "拉伸 (15分钟)", "瑜伽 (20分钟)", "轻度活动度锻炼 (15分钟)"]
+    }
+    
+    # 生成每周计划
+    import random
+    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    day_names = {
+        "monday": {"en": "Monday", "zh": "星期一"},
+        "tuesday": {"en": "Tuesday", "zh": "星期二"},
+        "wednesday": {"en": "Wednesday", "zh": "星期三"},
+        "thursday": {"en": "Thursday", "zh": "星期四"},
+        "friday": {"en": "Friday", "zh": "星期五"},
+        "saturday": {"en": "Saturday", "zh": "星期六"},
+        "sunday": {"en": "Sunday", "zh": "星期日"}
+    }
+    
+    # 分配训练日
+    all_days = days.copy()
+    random.shuffle(all_days)
+    
+    strength_training_days = all_days[:strength_days]
+    remaining_days = all_days[strength_days:]
+    cardio_training_days = remaining_days[:cardio_days]
+    rest_days = remaining_days[cardio_days:]
+    
+    # 创建周计划
+    weekly_plan = {
+        "training_days": training_days,
+        "strength_days": strength_days,
+        "cardio_days": cardio_days,
+        "rest_days": len(rest_days),
+        "intensity": intensity,
+        "days": {}
+    }
+    
+    # 填充每天的计划
+    for day in days:
+        workout = {}
+        
+        if day in strength_training_days:
+            workout_type = "strength"
+            workout_details = random.choice(strength_types[intensity]["en"])
+            workout_details_zh = strength_types[intensity]["zh"][strength_types[intensity]["en"].index(workout_details)]
+        elif day in cardio_training_days:
+            workout_type = "cardio"
+            workout_details = random.choice(cardio_types[intensity]["en"])
+            workout_details_zh = cardio_types[intensity]["zh"][cardio_types[intensity]["en"].index(workout_details)]
+        else:
+            workout_type = "rest"
+            workout_details = random.choice(recovery_types["en"])
+            workout_details_zh = recovery_types["zh"][recovery_types["en"].index(workout_details)]
+        
+        workout = {
+            "type": workout_type,
+            "details": {
+                "en": workout_details,
+                "zh": workout_details_zh
+            }
+        }
+        
+        weekly_plan["days"][day] = {
+            "name": day_names[day],
+            "workout": workout
+        }
+    
+    # 添加通用建议
+    weekly_plan["general_advice"] = {
+        "strength": fitness_recs["strength"],
+        "cardio": fitness_recs["cardio"]
+    }
+    
+    return weekly_plan
 
 def get_portion_suggestion(food_name):
     """获取食物份量建议"""
