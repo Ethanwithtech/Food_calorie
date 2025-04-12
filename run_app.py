@@ -62,6 +62,12 @@ def main():
         os.makedirs(temp_images_dir)
         print(f"Created temporary images directory: {temp_images_dir}")
     
+    # 确保config目录存在
+    config_dir = os.path.join(script_dir, "config")
+    if not os.path.exists(config_dir):
+        os.makedirs(config_dir)
+        print(f"Created config directory: {config_dir}")
+    
     # Start Streamlit application
     try:
         print(f"Launching the application, please wait...")

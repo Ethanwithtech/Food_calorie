@@ -60,7 +60,8 @@ TRANSLATIONS = {
         "show_hide_api": "Show/Hide API Settings",
         "api_key": "API Key",
         "update_api_key": "Update API Key",
-        "api_updated": "API key updated!",
+        "api_updated": "API key updated and saved!",
+        "api_save_info": "API key will be saved to a local file and loaded automatically the next time you start the application.",
         "footer_text": "Food Calorie Estimator - Developed using HKBU GenAI Platform<br>© 2025 Food Calorie Estimator | Data Sources: USDA Food Composition Database, Nutritionix API",
         "language": "Language/语言",
         "switch_to_zh": "切换到中文",
@@ -186,7 +187,8 @@ TRANSLATIONS = {
         "show_hide_api": "显示/隐藏API设置",
         "api_key": "API密钥",
         "update_api_key": "更新API密钥",
-        "api_updated": "API密钥已更新!",
+        "api_updated": "API密钥已更新并保存!",
+        "api_save_info": "API密钥将保存到本地文件，下次启动应用时将自动加载。",
         "footer_text": "食物热量估算器 - 使用HKBU GenAI平台开发<br>© 2025 食物热量估算器 | 数据来源: USDA食品成分数据库、Nutritionix API",
         "language": "Language/语言",
         "switch_to_en": "Switch to English",
@@ -485,7 +487,16 @@ st.markdown("""
 def init_session_state():
     """Initialize session state variables"""
     if 'api_key' not in st.session_state:
-        st.session_state.api_key = "6ba83cf4-0932-4596-8b6f-9870c596796a"  # Default API key
+        # 尝试从本地文件读取API key，如果没有则使用默认值
+        try:
+            api_key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'config', 'api_key.txt')
+            if os.path.exists(api_key_file):
+                with open(api_key_file, 'r') as f:
+                    st.session_state.api_key = f.read().strip()
+            else:
+                st.session_state.api_key = "333cac1b-8367-480e-b2e7-8fa06024dd14"  # 新的默认API key
+        except Exception:
+            st.session_state.api_key = "333cac1b-8367-480e-b2e7-8fa06024dd14"  # 如果出现任何问题，使用默认值
     if 'image_path' not in st.session_state:
         st.session_state.image_path = None
     if 'food_names' not in st.session_state:
@@ -575,9 +586,24 @@ def display_header():
             st.session_state.streamlit_note_shown = True
 
 def update_api_key():
-    """Update API key"""
+    """Update API key and save to file"""
+    # 更新会话状态中的API key
     st.session_state.api_key = st.session_state.new_api_key
-    st.success(get_text("api_updated"))
+    
+    # 保存API key到文件，以便下次启动时使用
+    try:
+        config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'config')
+        if not os.path.exists(config_dir):
+            os.makedirs(config_dir)
+        
+        api_key_file = os.path.join(config_dir, 'api_key.txt')
+        with open(api_key_file, 'w') as f:
+            f.write(st.session_state.api_key)
+        
+        st.success(get_text("api_updated"))
+    except Exception as e:
+        error_msg = str(e)
+        st.error(f"无法保存API密钥: {error_msg}" if st.session_state.language == "zh" else f"Unable to save API key: {error_msg}")
 
 def toggle_api_settings():
     """Toggle API settings display state"""
@@ -2411,6 +2437,7 @@ def display_sidebar():
         with api_expander:
             st.text_input(get_text("api_key"), value=st.session_state.api_key, key="new_api_key")
             st.button(get_text("update_api_key"), key="update_api_key_button", on_click=update_api_key)
+            st.info(get_text("api_save_info"))
         
         # 调试模式切换
         if st.checkbox("Debug Mode", value=st.session_state.debug_mode):
